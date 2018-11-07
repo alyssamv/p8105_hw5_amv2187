@@ -16,8 +16,8 @@ library(tidyverse)
 
 ```{r}
 patient_data = tibble(
-  patient = list.files('./data'), # get file names
-  data = map(paste0('./data/', patient), read.csv) # read each file as list entry in column
+  patient = list.files('./data/problem1'), # get file names
+  data = map(paste0('./data/problem1/', patient), read.csv) # read each file as list entry in column
 )
 
 head(patient_data)
@@ -50,5 +50,42 @@ patient_data_tidy %>%
     discrete = T
   ) +
   theme(legend.position = 'bottom') # aesthetics
+```
+
+
+
+### Problem 2
+
+```{r}
+homicide_data = read_csv('./data/problem2/homicide-data.csv') # read in data
+
+homicide_data_tidy = homicide_data %>%
+  mutate(city_state = paste(city, state, sep = ', ')) %>% # create city_state variable
+  mutate(unsolved = str_detect(disposition, 
+                               paste(c('Closed without arrest', 'Open/No arrest'), 
+                                     collapse = '|'))) # logical for unsolved yes/no
+homicide_data_tidy %>%
+  group_by(city_state) %>% 
+  summarise(n_homicides = n(),
+            n_unsolved = sum(unsolved)) %>%
+  knitr::kable()
+```
+
+```{r}
+homicide_data_tidy %>%
+  filter(city_state == 'Baltimore, MD') %>% 
+  summarise(n_unsolved = sum(unsolved),
+            n_homicides = n()) %>% 
+  rowwise() %>%
+  mutate(tst = list(broom::tidy(prop.test(n_unsolved, n_homicides)))) %>%
+  unnest(tst)
+
+homicide_data_tidy %>%
+  group_by(city_state) %>% 
+  summarise(n_homicides = n(),
+            n_unsolved = sum(unsolved)) %>%
+  rowwise() %>%
+  mutate(tst = list(broom::tidy(prop.test(n_unsolved, n_homicides)))) %>%
+  unnest(tst)
 ```
 
