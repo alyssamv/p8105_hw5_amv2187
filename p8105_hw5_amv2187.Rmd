@@ -39,7 +39,7 @@ str(patient_data_tidy)
 patient_data_tidy %>%
   mutate(id = paste0(arm, patient)) %>% # create one grouping variable of arm assignment and patient id within that arm
   ggplot(aes(x = week, y = outcome, group = id, color = arm)) +
-  geom_line() + # spaghetti plot grouped by patient
+  geom_line() + # lines for each patient
   geom_smooth(method = 'loess', aes(group = arm), se = F, lty = 3) + # fit smoothed curves for each trt group
   labs(
     title = 'Patient outcomes over time',
@@ -48,10 +48,13 @@ patient_data_tidy %>%
   ) + 
   viridis::scale_color_viridis(
     name = 'Treatment group',
+    labels = c('Control', 'Experimental'),
     discrete = T
   ) +
   theme(legend.position = 'bottom') # aesthetics
 ```
+
+The above figure displays the outcomes for each patient (solid lines), as well as fitted loess curves for each treatment groups (dotted lines). At the start of the study, there is overlap in outcomes betweens treatment groups. However, the differences between groups widen as time goes on.
 
 
 
@@ -65,38 +68,48 @@ homicide_data_tidy = homicide_data %>%
   mutate(unsolved = str_detect(disposition, 
                                paste(c('Closed without arrest', 'Open/No arrest'), 
                                      collapse = '|'))) # logical for unsolved yes/no
+```
+
+The data provided by the Washington Post contains information on homicides in 50 large US cities reported between 2007 and 2015. Data regarding the city, victim demographics (name, age, sex), date of the report, coordinates of the crime, and the status of the case is provided. The dataset is clean, although there is a single entry for Tulsa, AL, which appears to be a mistake. 
+
+```{r}
+# number of total and unsolved homicides in each city
 homicide_data_tidy %>%
   group_by(city_state) %>% 
   summarise(n_homicides = n(),
             n_unsolved = sum(unsolved)) %>%
-  knitr::kable()
-```
+  knitr::kable(col.names = c('City', 'Total homicides', 'Unsolved homicides'))
 
-```{r}
+# prop.test output for Baltimore, MD
 homicide_data_tidy %>%
-  filter(city_state == 'Baltimore, MD') %>% 
-  summarise(n_unsolved = sum(unsolved),
-            n_homicides = n()) %>% 
-  mutate(tst = list(broom::tidy(prop.test(n_unsolved, n_homicides)))) %>%
-  unnest(tst)
+  filter(city_state == 'Baltimore, MD') %>% # select rows for Baltimore, MD only
+  summarise(n_unsolved = sum(unsolved), # get total number of homicides
+            n_homicides = n()) %>% # total number of unsolved homicides
+  mutate(tst = list(broom::tidy(prop.test(n_unsolved, n_homicides)))) %>% # perform prop.test and save output as new column
+  unnest(tst) %>% # unnest prop.test output
+  select(estimate, conf.low, conf.high) %>% # select variables of interest
+  knitr::kable(caption = 'Proportion of unsolved homicides in Baltimore, MD',
+               col.names = c('Proportion', '95% CI lower bound', '95% CI upper bound'))
 
+
+# prop.test output for all cities
 city_prop = homicide_data_tidy %>%
   group_by(city_state) %>% 
   summarise(n_homicides = n(),
             n_unsolved = sum(unsolved)) %>%
-  mutate(tst = map2(.x = n_unsolved, .y = n_homicides, ~ broom::tidy(prop.test(.x, n = .y)))) %>%
+  mutate(tst = map2(.x = n_unsolved, .y = n_homicides, ~ broom::tidy(prop.test(.x, n = .y)))) %>% 
   unnest(tst) %>%
   select(city_state, estimate, conf.low, conf.high)
 
-city_prop %>% knitr::kable()
+city_prop %>% knitr::kable(caption = 'Proportion of unsolved homicides',
+               col.names = c('City', 'Proportion', '95% CI lower bound', '95% CI upper bound'))
 ```
 
 ```{r, fig.height=8, fig.width=6}
 city_prop %>%
-  mutate(city_state = fct_reorder(city_state, estimate, desc = T)) %>%
+  mutate(city_state = fct_reorder(city_state, estimate, desc = T)) %>% # order cities by percent of homicides that are unsolved
   ggplot(aes(x = city_state, y = estimate, color)) +
-  geom_bar(stat = 'identity', color = 'black', fill = 'grey') +
-  geom_point() +
+  geom_bar(stat = 'identity', color = 'black', fill = 'grey') + # bar plot
   geom_errorbar(aes(x = city_state, ymin = conf.low, ymax = conf.high), width = 0.5) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
