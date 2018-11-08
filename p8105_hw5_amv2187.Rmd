@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 
+theme_set(theme_bw())
 ```
 
 ### Problem 1
@@ -76,16 +77,38 @@ homicide_data_tidy %>%
   filter(city_state == 'Baltimore, MD') %>% 
   summarise(n_unsolved = sum(unsolved),
             n_homicides = n()) %>% 
-  rowwise() %>%
   mutate(tst = list(broom::tidy(prop.test(n_unsolved, n_homicides)))) %>%
   unnest(tst)
 
-homicide_data_tidy %>%
+city_prop = homicide_data_tidy %>%
   group_by(city_state) %>% 
   summarise(n_homicides = n(),
             n_unsolved = sum(unsolved)) %>%
-  rowwise() %>%
-  mutate(tst = list(broom::tidy(prop.test(n_unsolved, n_homicides)))) %>%
-  unnest(tst)
+  mutate(tst = map2(.x = n_unsolved, .y = n_homicides, ~ broom::tidy(prop.test(.x, n = .y)))) %>%
+  unnest(tst) %>%
+  select(city_state, estimate, conf.low, conf.high)
+
+city_prop %>% knitr::kable()
+```
+
+```{r, fig.height=8, fig.width=6}
+city_prop %>%
+  mutate(city_state = fct_reorder(city_state, estimate, desc = T)) %>%
+  ggplot(aes(x = city_state, y = estimate, color)) +
+  geom_bar(stat = 'identity', color = 'black', fill = 'grey') +
+  geom_point() +
+  geom_errorbar(aes(x = city_state, ymin = conf.low, ymax = conf.high), width = 0.5) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    title = 'Proportion of homicides that remain unsolved',
+    x = 'City',
+    y = 'Proportion of homicides unsolved'
+  ) +
+  coord_flip() +
+  viridis::scale_color_viridis(
+    name = 'City',
+    discrete = T
+  ) +
+  theme(legend.position = 'none')
 ```
 
