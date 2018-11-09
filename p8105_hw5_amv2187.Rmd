@@ -1,7 +1,7 @@
 ---
 title: "p8105_hw5_amv2187"
 author: "Alyssa Vanderbeek"
-date: "11/7/2018"
+date: "9 November 2018"
 output: github_document
 ---
 
@@ -54,7 +54,7 @@ patient_data_tidy %>%
   theme(legend.position = 'bottom') # aesthetics
 ```
 
-The above figure displays the outcomes for each patient (solid lines), as well as fitted loess curves for each treatment groups (dotted lines). At the start of the study, there is overlap in outcomes betweens treatment groups. However, the differences between groups widen as time goes on.
+The above figure displays the outcomes for each patient (solid lines), as well as fitted loess curves for each treatment groups (dotted lines). At the start of the study, there is overlap in outcomes betweens treatment groups. However, the differences between groups widen as time goes on. In fact, the outcomes for the experimental treatment group increase on average over time, while the outcomes for patients in the control group decrease. 
 
 
 
@@ -101,7 +101,8 @@ city_prop = homicide_data_tidy %>%
   unnest(tst) %>%
   select(city_state, estimate, conf.low, conf.high)
 
-city_prop %>% knitr::kable(caption = 'Proportion of unsolved homicides',
+city_prop %>% 
+  knitr::kable(caption = 'Proportion of unsolved homicides',
                col.names = c('City', 'Proportion', '95% CI lower bound', '95% CI upper bound'))
 ```
 
